@@ -11,7 +11,7 @@ public class ItemPrice {
 	
 	public ItemPrice() {
 		super();
-		// TODO Auto-generated constructor stub
+		
 	}
 
 	public ItemPrice(Map<Item, Integer> itemPerUnitPrice) {
