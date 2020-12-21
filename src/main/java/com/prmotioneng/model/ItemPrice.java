@@ -54,6 +54,8 @@ public class ItemPrice {
 		return true;
 	}
 
+	
+	
 	@Override
 	public String toString() {
 		return "ItemPrice [itemPerUnitPrice=" + itemPerUnitPrice + "]";
