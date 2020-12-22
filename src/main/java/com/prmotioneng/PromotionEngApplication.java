@@ -98,7 +98,7 @@ public class PromotionEngApplication {
 	        promotions.add(new BuyNPromotionService(items.get('B'), 2, 45));
 	        promotions.add(new Buy2ItemPromotion(items.get('C'), items.get('D'), 30));
 		
-		System.out.println(cartService.getCartPriceWithPromotion(cart, itemPrice,promotions));
+		System.out.println("Total Price :"+cartService.getCartPriceWithPromotion(cart, itemPrice,promotions));
 		
 		
 	}
