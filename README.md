@@ -8,7 +8,7 @@ Scenario
 1 * C 28
 Total 370
 
-Program input on console :
+input on console :
 A 5,B 5,C 1
 
 output :
