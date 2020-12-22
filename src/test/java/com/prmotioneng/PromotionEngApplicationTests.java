@@ -1,13 +1,193 @@
 package com.prmotioneng;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import com.prmotioneng.exception.InvalidCardException;
+import com.prmotioneng.model.Cart;
+import com.prmotioneng.model.Item;
+import com.prmotioneng.model.ItemPrice;
+import com.prmotioneng.services.Buy2ItemPromotion;
+import com.prmotioneng.services.BuyNPromotionService;
+import com.prmotioneng.services.CartServiceImpl;
+import com.prmotioneng.services.Promotion;
+
+
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import java.util.*;
 
 @SpringBootTest
 class PromotionEngApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
 
+	CartServiceImpl cartService;
+    Map<Character, Item> items;
+    ItemPrice itemPrice;
+
+    @BeforeEach
+    void contextLoads() {
+
+        items = new HashMap<>();
+        items.put('A', new Item('A'));
+        items.put('B', new Item('B'));
+        items.put('C', new Item('C'));
+        items.put('D', new Item('D'));
+
+        cartService = CartServiceImpl.getCartServiceInstance();
+        Map<Item, Integer> itemPerUnit = new HashMap<>();
+        itemPerUnit.put(items.get('A'), 50);
+        itemPerUnit.put(items.get('B'), 30);
+        itemPerUnit.put(items.get('C'), 20);
+        itemPerUnit.put(items.get('D'), 15);
+        itemPrice = new ItemPrice(itemPerUnit);
+    }
+
+    @Test
+    void cartPriceWithoutPromotion() throws InvalidCardException {
+        /*
+        Active Promotions
+
+        Scenario A
+        1 * A 50
+        1 * B 30
+        1 * C 20
+
+        total = 100
+         */
+
+        Map<Item, Integer> itemsWithQuantity = new HashMap<>();
+        itemsWithQuantity.put(items.get('A'), 1);
+        itemsWithQuantity.put(items.get('B'), 1);
+        itemsWithQuantity.put(items.get('C'), 1);
+
+        Cart cart = new Cart(itemsWithQuantity);
+        assert (cartService.getCartPrice(cart, itemPrice) == 100);
+
+    }
+
+    @Test
+    void cartWithBuyNPromotion() throws InvalidCardException {
+
+        /*
+        Active Promotions
+        2 A => 120
+        2 B => 50
+        Scenario A
+        2 * A 50
+        3 * B 30
+        1 * C 20
+
+        total = 220
+         */
+
+        Map<Item, Integer> itemsWithQuantity = new HashMap<>();
+        itemsWithQuantity.put(items.get('A'), 2);
+        itemsWithQuantity.put(items.get('B'), 3);
+        itemsWithQuantity.put(items.get('C'), 1);
+        Cart cart = new Cart(itemsWithQuantity);
+
+        ArrayList<Promotion> promotions = new ArrayList<>();
+        promotions.add(new BuyNPromotionService(items.get('A'), 2, 120));
+        promotions.add(new BuyNPromotionService(items.get('B'), 2, 50));
+
+        assert (cartService.getCartPriceWithPromotion(cart, itemPrice, promotions) == 220);
+    }
+
+    @Test
+    void cartWithBuy2ItemPromotion() throws InvalidCardException {
+        /*
+        Active Promotions
+        A + B => 60
+
+        Scenario A
+        2 * A + 2*B 120
+        1 * B 30
+        1 * C 20
+
+        total = 170
+         */
+
+        Map<Item, Integer> itemsWithQuantity = new HashMap<>();
+        itemsWithQuantity.put(items.get('A'), 2);
+        itemsWithQuantity.put(items.get('B'), 3);
+        itemsWithQuantity.put(items.get('C'), 1);
+        Cart cart = new Cart(itemsWithQuantity);
+
+        ArrayList<Promotion> promotions = new ArrayList<>();
+        promotions.add(new Buy2ItemPromotion(items.get('A'), items.get('B'), 60));
+
+        assert (cartService.getCartPriceWithPromotion(cart, itemPrice, promotions) == 170);
+    }
+
+    @Test
+    void cartWithMixPromotionsHavingOnlyBuyNPromotionEligibile() throws InvalidCardException {
+        /*
+       Active Promotions
+        3 of A's for 130
+        2 of B's for 45
+        C & D for 30
+
+
+        Scenario B
+        5 * A 130 + 2*50
+        5 * B 45 + 45 + 30
+        1 * C 20
+        Total 370
+
+         */
+
+        Map<Item, Integer> itemsWithQuantity = new HashMap<>();
+        itemsWithQuantity.put(items.get('A'), 5);
+        itemsWithQuantity.put(items.get('B'), 5);
+        itemsWithQuantity.put(items.get('C'), 1);
+        Cart cart = new Cart(itemsWithQuantity);
+
+        ArrayList<Promotion> promotions = new ArrayList<>();
+        promotions.add(new BuyNPromotionService(items.get('A'), 3, 130));
+        promotions.add(new BuyNPromotionService(items.get('B'), 2, 45));
+        promotions.add(new Buy2ItemPromotion(items.get('C'), items.get('D'), 30));
+
+        assert (cartService.getCartPriceWithPromotion(cart, itemPrice, promotions) == 370);
+    }
+
+    @Test
+    void cartWithMixPromotionsHavingMultiplePromotionEligibile() throws InvalidCardException {
+        /*
+       Active Promotions
+        3 of A's for 130
+        2 of B's for 45
+        C & D for 30
+
+
+        Scenario B
+        3 * A 130
+        5 * B 45 + 45 + 1 * 30
+        1 * C
+        1 * D 30
+        Total 280
+
+         */
+
+        Map<Item, Integer> itemsWithQuantity = new HashMap<>();
+        itemsWithQuantity.put(items.get('A'), 3);
+        itemsWithQuantity.put(items.get('B'), 5);
+        itemsWithQuantity.put(items.get('C'), 1);
+        itemsWithQuantity.put(items.get('D'), 1);
+        Cart cart = new Cart(itemsWithQuantity);
+
+        ArrayList<Promotion> promotions = new ArrayList<>();
+        promotions.add(new BuyNPromotionService(items.get('A'), 3, 130));
+        promotions.add(new BuyNPromotionService(items.get('B'), 2, 45));
+        promotions.add(new Buy2ItemPromotion(items.get('C'), items.get('D'), 30));
+
+        assert (cartService.getCartPriceWithPromotion(cart, itemPrice, promotions) == 280);
+    }
+    @Test
+    void invalidCardException() throws InvalidCardException {
+        assertThatExceptionOfType(InvalidCardException.class).isThrownBy(() ->cartService.getCartPriceWithPromotion(null,
+                null, null));
+
+    }
 }
